@@ -1,0 +1,1 @@
+"""SignBridge pose extraction package."""

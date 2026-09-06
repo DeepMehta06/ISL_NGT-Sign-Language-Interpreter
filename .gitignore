@@ -1,0 +1,74 @@
+# ──────────────────────────────────────────────────────────────
+# SignBridge .gitignore  (lives at repo root)
+# ──────────────────────────────────────────────────────────────
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# MyPy
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model weights — never commit large binary files
+signbridge/backend/models/*.pt
+signbridge/backend/models/*.pth
+signbridge/backend/models/*.bin
+signbridge/backend/models/*.onnx
+signbridge/backend/models/*.task
+
+# Raw datasets — source of truth, never modify or commit
+Datasets/
+signbridge/data/raw/
+signbridge/data/processed/
+signbridge/data/self_recorded/
+
+# Training runs and logs
+signbridge/runs/
+signbridge/logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Node (frontend — Phase 5)
+node_modules/
+.next/
+signbridge/frontend/dist/
+signbridge/frontend/build/
+
+# Temp
+*.tmp
+*.temp
