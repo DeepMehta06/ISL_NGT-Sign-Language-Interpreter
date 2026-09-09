@@ -1,0 +1,40 @@
+# NGT config — num_classes will be determined in Phase 3 after parsing
+# Multilingual-HoReCo.xlsx for gloss-level segmentation.
+# Do not train until Phase 3 annotation pipeline is complete.
+
+model:
+  num_classes: 0
+  dropout: 0.4
+  hidden_size: 256
+
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  epochs: 100
+  early_stopping_patience: 15
+  gradient_clip: 1.0
+  label_smoothing: 0.1
+
+scheduler:
+  type: "cosine"
+  T_max: 100
+  eta_min: 0.00001
+
+data:
+  language: "NGT"
+  sequences_path: "data/processed/ngt_sequences.npy"
+  labels_path: "data/processed/ngt_labels.npy"
+  train_split: 0.70
+  val_split: 0.15
+  test_split: 0.15
+  augment_train: true
+
+checkpoint:
+  save_dir: "backend/models/"
+  best_model_name: "best_ngt.pt"
+  save_every_n_epochs: 10
+
+logging:
+  run_dir: "runs/"
+  log_every_n_steps: 10

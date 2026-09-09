@@ -10,6 +10,7 @@ Always import from this module.
 
 from pathlib import Path
 
+import torch
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -61,7 +62,10 @@ class Settings(BaseSettings):
 
     # ── Logging & hardware ───────────────────────────────────────────────────
     log_level: str = Field(default="INFO", description="Loguru log level.")
-    device: str = Field(default="cpu", description="PyTorch device.")
+    device: str = Field(
+        default_factory=lambda: "cuda" if torch.cuda.is_available() else "cpu",
+        description="PyTorch device. Auto-detects CUDA. Override with DEVICE=cpu in .env.",
+    )
 
     # ── Pose extraction constants ────────────────────────────────────────────
     num_keypoints: int = Field(
@@ -115,16 +119,20 @@ class Settings(BaseSettings):
         description="Root directory for all raw datasets.",
     )
     processed_data_dir: Path = Field(
-        default=Path(__file__).resolve().parents[2] / "data" / "processed",
-        description="Output directory for preprocessed numpy arrays.",
+        default=Path(__file__).resolve().parents[3] / "Datasets" / "processed",
+        description="Output directory for preprocessed numpy arrays (root Datasets/processed/).",
     )
     self_recorded_dir: Path = Field(
-        default=Path(__file__).resolve().parents[2] / "data" / "self_recorded",
-        description="Directory for self-recorded sign sequences.",
+        default=Path(__file__).resolve().parents[3] / "Datasets" / "self_recorded",
+        description="Directory for self-recorded sign sequences (root Datasets/self_recorded/).",
     )
     model_dir: Path = Field(
         default=Path(__file__).resolve().parents[2] / "backend" / "models",
         description="Directory for trained PyTorch model weights.",
+    )
+    runs_dir: Path = Field(
+        default=Path(__file__).resolve().parents[2] / "runs",
+        description="Root directory for training run artefacts.",
     )
 
     # ── Dataset paths ────────────────────────────────────────────────────────
@@ -162,6 +170,7 @@ class Settings(BaseSettings):
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
         self.self_recorded_dir.mkdir(parents=True, exist_ok=True)
         self.model_dir.mkdir(parents=True, exist_ok=True)
+        self.runs_dir.mkdir(parents=True, exist_ok=True)
 
 
 # Module-level singleton — import this everywhere:

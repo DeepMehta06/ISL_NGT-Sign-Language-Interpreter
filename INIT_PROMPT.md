@@ -1,3 +1,9 @@
+
+
+
+
+
+
 SignBridge — Claude Initialization Prompt
 
 Copy and paste the entire block below to Claude (or any AI agent) to initialize the project structure for Phase 1.

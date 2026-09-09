@@ -1,4 +1,4 @@
-# SignBridge — Project Rules & conventions
+﻿# SignBridge — Project Rules & conventions
 
 > Read this before touching any file. Every contributor (including AI agents) must follow these rules without exception.
 
@@ -209,3 +209,46 @@ def extract(f):
 - Never use `any` type in TypeScript
 - Never bypass the conda environment activation step
 - Never write unnecesarry lots of comments
+
+---
+
+## 11. Documentation diagrams � mandatory Mermaid
+
+All architecture diagrams in any `docs/` or `PHASE_N.md` file **must** use Mermaid syntax. Plain ASCII box art is not allowed.
+
+Rules for Mermaid diagrams:
+- Use `flowchart TD` for top-down data flow (model architecture, pipeline stages)
+- Use `graph LR` for horizontal dependency graphs
+- Use `sequenceDiagram` for request/response or real-time event flows
+- Every node must include the **tensor shape** or **data type** relevant to that stage
+- Layer nodes must show: layer type, key parameters (channels, kernel size, etc.)
+- Use subgraphs to group logical blocks (e.g. Spatial Encoder, Temporal Encoder, Classifier Head)
+- Node labels containing parentheses or special characters must be quoted: `id["Label (shape)"]`
+- Do NOT use HTML tags inside Mermaid node labels
+
+Any AI agent writing architecture documentation that uses ASCII diagrams instead of Mermaid is in violation of this rule and must rewrite the diagram.
+
+
+
+---
+
+## 12. AI agent command execution policy
+
+AI agents must **never run commands autonomously** on behalf of the user unless the user explicitly says "run it" or "execute".**
+
+- Always provide the exact command(s) the user should run themselves.
+- Do not use un_command to test or verify scripts unless the user has granted explicit permission for that specific command.
+- Wasting API credits on command execution that the user intended to run themselves is a violation of this rule.
+
+
+---
+
+## 13. GPU / CUDA usage — always prefer GPU
+
+- `settings.device` auto-detects CUDA via `torch.cuda.is_available()`. Never hardcode `'cpu'`  or `'cuda'` anywhere in code — always read from `settings.device`.\r
+- Training (`Trainer`), inference, and evaluation always move tensors to `settings.device`.\r
+- DataLoader `pin_memory=True` when CUDA is available — reduces CPU->GPU transfer latency.\r
+- MediaPipe pose extraction is CPU-only (no CUDA support). Do not attempt GPU acceleration there.\r
+- To override device manually, set `DEVICE=cpu` in the `.env` file. Never change code for this.\r
+- When adding any new PyTorch component, always call `.to(device)` on the model and `.to(self.device)` on all tensors inside training/inference loops.\r
+
