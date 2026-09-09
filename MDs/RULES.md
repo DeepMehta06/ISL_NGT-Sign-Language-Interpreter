@@ -252,3 +252,27 @@ AI agents must **never run commands autonomously** on behalf of the user unless 
 - To override device manually, set `DEVICE=cpu` in the `.env` file. Never change code for this.\r
 - When adding any new PyTorch component, always call `.to(device)` on the model and `.to(self.device)` on all tensors inside training/inference loops.\r
 
+
+---
+
+## 14. Phase runner scripts — mandatory
+
+Every phase must have a corresponding runner script at `signbridge/scripts/run_phase_N.py` (where N is the phase number):
+
+- `run_phase_1.py` — all Phase 1 setup and validation steps
+- `run_phase_2.py` — pose extraction, tests, training, evaluation
+- `run_phase_N.py` — all steps required to complete Phase N
+
+Rules for runner scripts:
+- Each step uses `subprocess.run` calling the appropriate script/command
+- If any step fails (non-zero exit code), the runner exits immediately with that code
+- Steps that are expensive (e.g. pose extraction) must be skippable if output already exists
+- Every runner must import `settings` and use `settings.*` for all paths — no hardcoded paths
+- Each runner must expose a `main()` function so `run_all_phases.py` can import and call it
+
+The master runner `signbridge/scripts/run_all_phases.py` must always exist and must:
+- Import and call each `run_phase_N.main()` in order
+- Support `--from-phase N` to resume from a specific phase
+- Support `--only-phase N` to run a single phase
+- Stop immediately if any phase fails
+
