@@ -101,6 +101,27 @@ def build_datasets(
 
     logger.info(f"Loaded sequences: {sequences.shape}, labels: {raw_labels.shape}")
 
+    # Each class needs enough samples so that the temp set (30%) still has >= 2 for the
+    # val/test stratified split. ceil(2 / (1 - train_split)) = ceil(2 / 0.30) = 7.
+    import math
+    min_for_second_split = math.ceil(2.0 / (1.0 - train_split))
+    MIN_SAMPLES_PER_CLASS = max(2, min_for_second_split)
+
+    unique, counts = np.unique(raw_labels, return_counts=True)
+    valid_classes = set(unique[counts >= MIN_SAMPLES_PER_CLASS])
+    dropped = sorted(unique[counts < MIN_SAMPLES_PER_CLASS].tolist())
+    if dropped:
+        logger.warning(
+            f"Dropping {len(dropped)} classes with fewer than {MIN_SAMPLES_PER_CLASS} "
+            f"samples (cannot survive both stratified splits): {dropped}"
+        )
+        mask = np.isin(raw_labels, list(valid_classes))
+        sequences = sequences[mask]
+        raw_labels = raw_labels[mask]
+        logger.info(
+            f"After filtering: {sequences.shape[0]} sequences, {len(valid_classes)} classes"
+        )
+
     if label_encoder is None:
         label_encoder = LabelEncoder()
         encoded_labels = label_encoder.fit_transform(raw_labels)
@@ -108,7 +129,6 @@ def build_datasets(
         encoded_labels = label_encoder.transform(raw_labels)
 
     test_size = 1.0 - train_split
-    val_ratio_of_remainder = val_split / (val_split + (1.0 - train_split - val_split))
 
     x_train, x_temp, y_train, y_temp = train_test_split(
         sequences, encoded_labels,
@@ -116,12 +136,20 @@ def build_datasets(
         stratify=encoded_labels,
         random_state=42,
     )
-    x_val, x_test, y_val, y_test = train_test_split(
-        x_temp, y_temp,
-        test_size=0.5,
-        stratify=y_temp,
-        random_state=42,
-    )
+    try:
+        x_val, x_test, y_val, y_test = train_test_split(
+            x_temp, y_temp,
+            test_size=0.5,
+            stratify=y_temp,
+            random_state=42,
+        )
+    except ValueError:
+        logger.warning("Cannot stratify val/test split — falling back to random split.")
+        x_val, x_test, y_val, y_test = train_test_split(
+            x_temp, y_temp,
+            test_size=0.5,
+            random_state=42,
+        )
 
     logger.info(
         f"Split sizes — train: {len(x_train)}, val: {len(x_val)}, test: {len(x_test)}"

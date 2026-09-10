@@ -19,8 +19,8 @@ scheduler:
 
 data:
   language: "ISL"
-  sequences_path: "data/processed/isl_sequences_include.npy"
-  labels_path: "data/processed/isl_labels_include.npy"
+  sequences_path: "isl_sequences_include.npy"
+  labels_path: "isl_labels_include.npy"
   train_split: 0.70
   val_split: 0.15
   test_split: 0.15

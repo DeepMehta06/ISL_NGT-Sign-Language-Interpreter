@@ -276,3 +276,19 @@ The master runner `signbridge/scripts/run_all_phases.py` must always exist and m
 - Support `--only-phase N` to run a single phase
 - Stop immediately if any phase fails
 
+
+---
+
+## 15. Persistent run status — mandatory for all phase runners
+
+Every `run_phase_N.py` must write a persistent status file to `runs/phase_N_status.json` after each step completes.
+
+Rules:
+- Status file is written immediately after each step succeeds — before the next step starts
+- Status file format: `{started_at, last_updated, steps_completed: [], step_details: {step: {completed_at, detail}}}`
+- On startup, the runner reads the status file and skips already-completed steps
+- A `--reset` flag must be available to delete the status file and restart all steps
+- If a step fails, the runner exits but the status file is NOT corrupted — it retains all previously completed steps
+- Re-running after a crash/restart automatically resumes from the last incomplete step
+- This ensures that a laptop restart, power cut, or OOM kill never requires repeating hours of completed work
+

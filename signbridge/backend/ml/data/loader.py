@@ -96,8 +96,8 @@ class DatasetLoader:
             seqs, labs = self._process_video_tree(
                 root=extract_root,
                 dataset_name=zip_path.stem,
-                extensions=(".mp4", ".avi"),
-                label_depth=1,
+                extensions=(".mp4", ".avi", ".mov"),
+                label_depth=2,
             )
             all_sequences.extend(seqs)
             all_labels.extend(labs.tolist())
@@ -142,8 +142,8 @@ class DatasetLoader:
         sequences, labels = self._process_video_tree(
             root=extracted_root,
             dataset_name="INCLUDE",
-            extensions=(".mp4", ".avi"),
-            label_depth=1,
+            extensions=(".mp4", ".avi", ".mov"),
+            label_depth=2,
         )
 
         if len(sequences) == 0:
@@ -331,7 +331,10 @@ class DatasetLoader:
         sequences, labels = [], []
         for video_path in tqdm(video_paths, desc=f"Processing {dataset_name}"):
             parts = video_path.relative_to(root).parts
-            label = parts[-1 - label_depth] if len(parts) > label_depth else video_path.stem
+            if label_depth == 1:
+                label = parts[-2] if len(parts) >= 2 else video_path.stem
+            else:
+                label = "/".join(parts[-(label_depth + 1):-1]) if len(parts) > label_depth else video_path.stem
             seqs = self._extract_sequences_from_video(video_path)
             for seq in seqs:
                 sequences.append(seq)
@@ -392,6 +395,7 @@ class DatasetLoader:
             seq_path: Output path for sequences.
             label_path: Output path for labels.
         """
+        seq_path.parent.mkdir(parents=True, exist_ok=True)
         np.save(seq_path, sequences)
         np.save(label_path, labels)
         logger.info(f"Saved sequences: {seq_path} {sequences.shape}")
@@ -413,6 +417,6 @@ class DatasetLoader:
             f"Unique classes:  {len(unique)}\n"
             f"Min per class:   {counts.min() if len(counts) else 0}\n"
             f"Max per class:   {counts.max() if len(counts) else 0}\n"
-            f"Mean per class:  {counts.mean():.1f if len(counts) else 0}\n"
+            f"Mean per class:  {counts.mean() if len(counts) else 0:.1f}\n"
             f"{'='*50}"
         )

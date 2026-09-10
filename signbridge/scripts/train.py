@@ -1,4 +1,4 @@
-"""Training entry point for SignBridge.
+﻿"""Training entry point for SignBridge.
 
 Usage:
     python scripts/train.py --language ISL --config backend/ml/training/configs/isl_config.yaml
@@ -57,8 +57,8 @@ def main() -> None:
     logger.info(f"Loaded config: {config_path}")
 
     data_cfg = config["data"]
-    sequences_path = settings.project_root / data_cfg["sequences_path"]
-    labels_path = settings.project_root / data_cfg["labels_path"]
+    sequences_path = settings.processed_data_dir / data_cfg["sequences_path"]
+    labels_path = settings.processed_data_dir / data_cfg["labels_path"]
 
     train_ds, val_ds, test_ds, label_encoder = build_datasets(
         sequences_path=sequences_path,
@@ -68,6 +68,10 @@ def main() -> None:
         val_split=data_cfg["val_split"],
         augment_train=data_cfg["augment_train"],
     )
+
+    num_classes = len(label_encoder.classes_)
+    config["model"]["num_classes"] = num_classes
+    logger.info(f"Training with {num_classes} classes (derived from data after filtering)")
 
     train_loader, val_loader, test_loader = build_dataloaders(
         train_ds, val_ds, test_ds,
@@ -89,3 +93,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
