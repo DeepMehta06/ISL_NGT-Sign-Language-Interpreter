@@ -58,8 +58,8 @@ def main() -> None:
     config = ckpt["config"]
 
     data_cfg = config["data"]
-    sequences_path = settings.project_root / data_cfg["sequences_path"]
-    labels_path = settings.project_root / data_cfg["labels_path"]
+    sequences_path = settings.processed_data_dir / data_cfg["sequences_path"]
+    labels_path = settings.processed_data_dir / data_cfg["labels_path"]
 
     _, _, test_ds, label_encoder = build_datasets(
         sequences_path=sequences_path,

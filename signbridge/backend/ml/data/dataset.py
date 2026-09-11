@@ -181,7 +181,7 @@ def build_dataloaders(
     val_ds: SignSequenceDataset,
     test_ds: SignSequenceDataset,
     batch_size: int,
-    num_workers: int = 0,
+    num_workers: int = 4,
 ) -> tuple[DataLoader, DataLoader, DataLoader]:
     """Wrap datasets in DataLoaders.
 
@@ -196,16 +196,20 @@ def build_dataloaders(
         Tuple of (train_loader, val_loader, test_loader).
     """
     pin_memory = torch.cuda.is_available()
+    persistent = num_workers > 0
     train_loader = DataLoader(
         train_ds, batch_size=batch_size, shuffle=True,
         num_workers=num_workers, pin_memory=pin_memory, drop_last=True,
+        persistent_workers=persistent,
     )
     val_loader = DataLoader(
         val_ds, batch_size=batch_size, shuffle=False,
         num_workers=num_workers, pin_memory=pin_memory,
+        persistent_workers=persistent,
     )
     test_loader = DataLoader(
         test_ds, batch_size=batch_size, shuffle=False,
         num_workers=num_workers, pin_memory=pin_memory,
+        persistent_workers=persistent,
     )
     return train_loader, val_loader, test_loader
