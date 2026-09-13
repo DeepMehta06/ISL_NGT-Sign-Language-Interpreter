@@ -1,7 +1,9 @@
-﻿# Phase 2 — CNN + Bidirectional LSTM Training Pipeline
+# Phase 2 — CNN + Bidirectional LSTM Training Pipeline
 
-**Status:** Complete
-**Date:** 2026-09-09
+**Status:** ✅ Complete  
+**Implementation date:** 2026-09-09  
+**Training completed:** 2026-09-11  
+**Evaluation completed:** 2026-09-13  
 
 ---
 
@@ -158,9 +160,10 @@ Validation and test sets are never augmented.
 | Weight decay            | 0.0001          | Mild L2 regularisation                                       |
 | LR schedule             | CosineAnnealing | Smooth decay with guaranteed floor                           |
 | Batch size              | 32              | GPU-friendly; larger increases stability but slows iteration |
+| Max epochs              | 250             | Extended budget to allow full convergence                    |
 | Label smoothing         | 0.1             | Reduces overconfidence on visually similar signs             |
 | Gradient clipping       | 1.0             | Prevents exploding gradients in deep BiLSTM                  |
-| Early stopping patience | 15 epochs       | Allows recovery from plateaus before stopping                |
+| Early stopping patience | 30 epochs       | Wider patience with 250-epoch budget                         |
 | Dropout CNN             | 0.2             | Light regularisation in spatial encoder                      |
 | Dropout LSTM            | 0.3             | Between LSTM layers                                          |
 | Dropout classifier      | 0.4             | Heaviest at the prediction head                              |
@@ -365,13 +368,65 @@ Run: `pytest backend/tests/test_model.py -v`
 
 ---
 
-## 10. Known limitations and future improvements
+## 10. Training results — INCLUDE dataset
 
-- **No real training results yet** — INCLUDE zip extraction (~40 GB) must run first via `prepare_data.py`. Training results (val accuracy, loss curves) will be added here after first training run completes.
+**Run:** `isl_20260911_130610`  
+**Hardware:** NVIDIA GeForce RTX 4060 Laptop GPU (CUDA 13.1), 8 GB VRAM  
+**Training duration:** ~3h 44m (245 epochs, early stopped)
+
+### Final metrics (test split — 1808 samples, 265 classes)
+
+| Metric              | Score      |
+| ------------------- | ---------- |
+| **Top-1 Accuracy**  | **71.35%** |
+| **Top-5 Accuracy**  | **90.65%** |
+| **Macro F1**        | 0.7039     |
+| **Weighted F1**     | 0.7095     |
+| Num classes (after filtering) | 265 |
+| Sequences used      | 12,049     |
+| Train / Val / Test  | 8,434 / 1,807 / 1,808 |
+| Model checkpoint    | `backend/models/best_isl.pt` (36.4 MB) |
+
+> 71.35% top-1 accuracy on 265 classes. Random baseline = 1/265 = 0.38% — the model is ~190× better than random. Top-5 at 90.65% means the correct sign is in the model's top-5 predictions 90% of the time, which is sufficient for a guided inference UI.
+
+### Training curves
+
+![Training curves](../../backend/ml/evaluation/reports/isl_20260913_153006/training_curves.png)
+
+### Per-class accuracy
+
+![Per-class accuracy](../../backend/ml/evaluation/reports/isl_20260913_153006/per_class_accuracy.png)
+
+### Confusion matrix
+
+![Confusion matrix](../../backend/ml/evaluation/reports/isl_20260913_153006/confusion_matrix.png)
+
+### Category-level highlights
+
+| Category              | Classes | Best class (acc) | Worst class (acc) | Notes |
+| --------------------- | ------- | --------------- | ---------------- | ----- |
+| Adjectives            | 50      | many at 1.0     | loose, dirty (0.0) | High variance — similar handshapes confuse the model |
+| Animals               | 8       | Fish 0.92, Mouse 0.91 | Horse 0.45 | Strong overall |
+| Clothes               | 10      | Pant 1.0, Shoes 0.80 | Hat 0.38 | Hat sign visually similar to Hair |
+| Colours               | 11      | Orange 0.86, Yellow 0.88 | Red 0.25, White 0.29 | Colour signs highly similar in INCLUDE |
+| Days & Time           | 21      | Monday, Wednesday, Friday, Saturday 1.0 | Thursday 0.0 | Thursday sign has low sample count |
+| Electronics           | 10      | Fan, Screen, Television 1.0 | Cell phone 0.60 | Excellent overall |
+| Greetings             | 9       | Pleased 1.0 | Alright 0.70 | Good overall |
+| People                | 26      | Crowd 1.0, Queen 0.88 | Sister 0.17, Father 0.25 | Family terms confused with each other |
+| Places                | 19      | Park, Temple, Ground 1.0 | Store/Shop 0.33 | Strong |
+| Society               | 23      | many at 1.0 | Marriage 0.0 | Marriage sign confused with similar gestures |
+| Transportation        | 9       | Plane 0.91, Car 0.82 | Bicycle 0.27 | Bicycle sign visually ambiguous |
+
+---
+
+## 11. Known limitations and future improvements
+
 - **NGT deferred** — Phase 3 annotation parsing required before NGT can be trained.
-- **Single dataset** — Phase 2 trains only on INCLUDE (263 classes). Combining ISLVT and ISL_Dataset will require aligning class vocabularies across datasets.
-- **No class imbalance handling yet** — INCLUDE is roughly balanced but exact counts vary. If `prepare_data.py` reveals significant skew, consider weighted sampling or focal loss.
-- **CPU-only tested** — Model is device-agnostic. If a CUDA GPU is available, set `DEVICE=cuda` in `.env`.
+- **Single ISL dataset** — Phase 2 trains only on INCLUDE (263 classes). Combining ISLVT and ISL_Dataset will require aligning class vocabularies across datasets.
+- **ISL_Dataset is image-only** — ISL.zip contains 42,000 static JPG images (not videos). A Phase 3 image→sequence converter is needed before these can be merged with INCLUDE sequences.
+- **Low-count classes** — 13 classes dropped (< 7 samples). Signs like `Adjectives/loose`, `Colours/Red`, and `People/Sister` show poor accuracy due to limited training examples per class.
+- **CPU augmentation bottleneck** — scipy-based `time_warp` is the training speed bottleneck. GPU utilisation was ~34% due to CPU workers being unable to keep up. `persistent_workers=True` + `num_workers=4` mitigated but did not eliminate this.
+- **No real-time inference pipeline yet** — The model is a checkpoint file. The `WordAccumulator` and FastAPI WebSocket endpoint are Phase 3/4 deliverables.
 
 ---
 

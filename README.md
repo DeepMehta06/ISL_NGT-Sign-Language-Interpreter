@@ -62,7 +62,7 @@ Supporting two structurally different sign languages in one system also means th
 
 ## 3. Objectives
 
-- Classify isolated ISL signs in real time from webcam input using a CNN + BiLSTM model trained on the INCLUDE dataset (263 classes).
+- Classify isolated ISL signs in real time from webcam input using a CNN + BiLSTM model trained on the INCLUDE dataset (265 classes, 71.35% top-1 accuracy on test set).
 - Classify NGT signs after Phase 3 annotation parsing of the HoReCo corpus.
 - Assemble recognised signs into grammatically correct sentences using IndicBERT (ISL) and BERTje (NGT).
 - Speak the constructed sentence aloud using text-to-speech.
@@ -280,7 +280,7 @@ Sign language has temporal structure in both directions. The release phase of a 
 | Spatial encoder (CNN)     | ~250K           |
 | Temporal encoder (BiLSTM) | ~2.6M           |
 | Classifier head           | ~650K           |
-| **Total**           | **~3.5M** |
+| **Total**           | **~3.18M** |
 
 ### 7.2 Data augmentation
 
@@ -715,21 +715,34 @@ Everything needed to extract, store, and inspect keypoints from any video source
 
 ### Phase 2 — CNN + BiLSTM Training Pipeline
 
-**Status: ✅ Complete (2026-09-09)**
+**Status: ✅ Complete (2026-09-11)**
 
 Everything needed to train, evaluate, and checkpoint the recognition model.
 
-- `SignBridgeModel` — 3-layer CNN spatial encoder + 2-layer BiLSTM temporal encoder + classifier head (~3.5M parameters)
+- `SignBridgeModel` — 3-layer CNN spatial encoder + 2-layer BiLSTM temporal encoder + classifier head (3,178,441 parameters)
 - `KeypointAugmentation` — time-warp, horizontal mirror, Gaussian noise
-- `SignSequenceDataset` + `build_dataloaders` — stratified 70/15/15 split
+- `SignSequenceDataset` + `build_dataloaders` — stratified 70/15/15 split, `num_workers=4`, `persistent_workers=True`
 - `LabelSmoothingCrossEntropy` — ε = 0.1
-- `Trainer` — AdamW, cosine annealing LR, gradient clipping, early stopping, checkpoint saving
+- `Trainer` — AdamW, cosine annealing LR, gradient clipping, early stopping (patience 30), checkpoint saving
 - `Evaluator` + `ReportGenerator` — top-1/5 accuracy, macro/weighted F1, confusion matrix PNG
-- `isl_config.yaml` — full hyperparameter set
+- `isl_config.yaml` — 250 epochs, all hyperparameters
 - `run_phase_2.py` — phase runner with persistent step status and automatic resumption
 - 28 unit tests passing
 
-> **Note:** INCLUDE zip extraction (~40 GB) must be run via `prepare_data.py` before actual training results are available. Training results will be appended to `PHASE_2.md` after the first full run completes.
+**Training results (INCLUDE dataset, 2026-09-11):**
+
+| Metric | Score |
+|---|---|
+| Top-1 Accuracy | **71.35%** |
+| Top-5 Accuracy | **90.65%** |
+| Macro F1 | 0.7039 |
+| Weighted F1 | 0.7095 |
+| Classes | 265 |
+| Test samples | 1,808 |
+| Epochs trained | 245 / 250 (early stopped) |
+| Model size | 36.4 MB |
+
+Full evaluation report: `signbridge/backend/ml/evaluation/reports/isl_20260913_153006/`
 
 ### Phase 3 — NLP Sentence Construction and Accumulator
 
@@ -790,7 +803,7 @@ pie title Implementation progress by subsystem
 | Model architecture        | ✅ Implemented  | `SignBridgeModel` — CNN + BiLSTM                            |
 | Training loop             | ✅ Implemented  | `Trainer` with early stopping + checkpoint                   |
 | Evaluation                | ✅ Implemented  | Top-1/5 accuracy, F1, confusion matrix                         |
-| Training on INCLUDE       | 🔄 Ready to run | Requires dataset extraction first                              |
+| Training on INCLUDE       | ✅ Complete     | 71.35% top-1 / 90.65% top-5 on 265 classes                    |
 | Training on NGT           | ⏳ Phase 3      | Requires annotation parsing                                    |
 | Word accumulator          | ⏳ Phase 3      | `backend/ml/inference/`                                      |
 | NLP sentence construction | ⏳ Phase 3      | `backend/nlp/`                                               |
@@ -804,11 +817,11 @@ pie title Implementation progress by subsystem
 
 **Current (Phase 1 + 2):**
 
-- ISL training results are not yet available. INCLUDE zip extraction (~40 GB) must complete first via `prepare_data.py`. This is a one-time operation but takes several hours.
 - The NGT classifier cannot be trained until Phase 3 annotation parsing is complete.
-- No real-time inference pipeline exists yet — the trained model is a checkpoint file, not a running service.
-- No vocabulary alignment across the three ISL datasets. INCLUDE (263 classes), ISLVT, and ISL_Dataset likely use different gloss labels for the same signs. Cross-dataset merging is Phase 3 work.
-- The model is validated on synthetic data in unit tests, not on held-out real-world video.
+- No real-time inference pipeline exists yet — the trained model is a checkpoint file at `backend/models/best_isl.pt`. The `WordAccumulator`, FastAPI endpoint, and frontend are Phases 3–5.
+- ISL_Dataset (ISL.zip) contains 42,000 static JPG images, not videos — cannot be directly merged with INCLUDE sequences. A Phase 3 image→sequence converter is needed.
+- No vocabulary alignment across the three ISL datasets. INCLUDE (265 classes), ISLVT, and ISL_Dataset likely use different gloss labels for the same signs. Cross-dataset merging is Phase 3 work.
+- 13 sign classes dropped from training (< 7 samples): signs like `Adjectives/loose`, `Colours/Red`, and `People/Sister` have limited examples and poor model accuracy.
 
 **Architectural:**
 
